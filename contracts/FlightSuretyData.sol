@@ -49,6 +49,7 @@ contract FlightSuretyData {
     mapping(bytes32 => Flight) private flights;
     mapping(address => Passenger) private passengers;
 
+    mapping(address => uint256) airlineBalances;
     uint256 private airlineBalance = 0;
     uint256 private insuranceBalance = 0;
 
@@ -107,8 +108,13 @@ contract FlightSuretyData {
         _;
     }
 
-    modifier isAirlineRegistered(address airlineAddress){
+    modifier requireAirlineRegistered(address airlineAddress){
         require(_isAirlineRegistered(airlineAddress), "Caller is not airline");
+        _;
+    }
+
+    modifier requireAirlineRegisteredAndFunded(address airlineAddress){
+        require(_isAirlineRegistered(airlineAddress) && _isAirlineFunded(airlineAddress), "Caller is not airline");
         _;
     }
 
@@ -145,7 +151,7 @@ contract FlightSuretyData {
                                 bool mode
                             )
                             external
-                            requireIsOperational
+                            requireContractOwner
     {
         operational = mode;
     }
@@ -154,7 +160,7 @@ contract FlightSuretyData {
     * @dev Authorize data contract callers
     */
     function authorizeCaller(address caller) external requireContractOwner {
-       authorizedContracts[caller] = 1;
+        authorizedContracts[caller] = 1;
     }
 
     /********************************************************************************************/
@@ -174,7 +180,7 @@ contract FlightSuretyData {
                             external
                             requireIsOperational
                             requireIsAuthorizedContract
-                            isAirlineRegistered(callerAirline)
+                            requireAirlineRegisteredAndFunded(callerAirline)
     {
         _registerAirline(newAirlineAddress);
     }
@@ -187,7 +193,7 @@ contract FlightSuretyData {
                               external
                               requireIsOperational
                               requireIsAuthorizedContract
-                              isAirlineRegistered(callerAirline)
+                              requireAirlineRegistered(callerAirline)
                               returns(uint256 votes)
     {
         airlines[callerAirline].votedForAirlines[airlineAddressToVote] = true;
@@ -204,10 +210,12 @@ contract FlightSuretyData {
                             external payable
                             requireIsOperational
                             requireIsAuthorizedContract
-                            isAirlineRegistered(callerAirline)
+                            requireAirlineRegistered(callerAirline)
      {
         require(msg.value > 0, "The funding amount should be > 0");
         require(!airlines[callerAirline].isFunded, "Calling airline has already funded their account");
+        //airlines[callerAirline].fundBalance.add(msg.value);
+        //airlineBalances[callerAirline] = airlineBalances[callerAirline].add(msg.value);
         airlineBalance = airlineBalance.add(msg.value);
         airlines[callerAirline].isFunded = true;
     }
@@ -222,14 +230,35 @@ contract FlightSuretyData {
         return _isAirlineRegistered(airlineAddress);
     }
 
-    function isAirlineRegisteredAndFunded(address airlineAddress)
+    function isAirlineRegistering(address airlineAddress)
                         external
                         view
                         requireIsOperational
                         requireIsAuthorizedContract
                         returns(bool)
     {
+        return _isAirlineRegistering(airlineAddress);
+    }
+
+    function isAirlineRegisteredAndFunded(address airlineAddress)
+                        external
+                        requireIsOperational
+                        requireIsAuthorizedContract
+                        returns(bool)
+    {
         return _isAirlineRegistered(airlineAddress) && _isAirlineFunded(airlineAddress);
+    }
+
+    function getAirlineFundBalance()
+                        external
+                        view
+                        requireIsOperational
+                        requireIsAuthorizedContract
+                        returns(uint256)
+    {
+        //balance = airlines[airlineAddress].fundBalance;
+        //balance = airlineBalances[airlineAddress];
+        return airlineBalance;
     }
 
     function registerFlight
@@ -241,7 +270,7 @@ contract FlightSuretyData {
                             external
                             requireIsOperational
                             requireIsAuthorizedContract
-                            isAirlineRegistered(callerAirline)
+                            requireAirlineRegistered(callerAirline)
     {
         bytes32 flightKey = _getFlightKey(callerAirline, flightCode, timestamp);
         flights[flightKey] = Flight({
@@ -272,7 +301,7 @@ contract FlightSuretyData {
                             external
                             requireIsOperational
                             requireIsAuthorizedContract
-                            isAirlineRegistered(callerAirline)
+                            requireAirlineRegistered(callerAirline)
     {
         bytes32 flightKey = _getFlightKey(callerAirline, flightCode, timestamp);
         require(_isFlightRegistered(flightKey), "Flight not registered");
@@ -438,7 +467,7 @@ contract FlightSuretyData {
     /********************************************************************************************/
     /*                                        INTERNAL FUNCTIONS                                */
     /********************************************************************************************/
-    function _registerAirline(address newAirlineAddress) private requireIsOperational
+    function _registerAirline(address newAirlineAddress) private
     {
         // accept the new register
         airlines[newAirlineAddress].isRegistered = true;
@@ -446,11 +475,15 @@ contract FlightSuretyData {
         emit AirlineRegistered(newAirlineAddress);
     }
 
-    function _isAirlineRegistered(address airlineAddress) private view requireIsOperational returns(bool) {
+    function _isAirlineRegistered(address airlineAddress) private returns(bool) {
         return (airlines[airlineAddress].isRegistered);
     }
 
-    function _isAirlineFunded(address airlineAddress) private view requireIsOperational returns(bool) {
+    function _isAirlineRegistering(address airlineAddress) private returns(bool) {
+        return (registeringAirlines[airlineAddress] > 0);
+    }
+
+    function _isAirlineFunded(address airlineAddress) private returns(bool) {
         return (airlines[airlineAddress].isFunded);
     }
 
