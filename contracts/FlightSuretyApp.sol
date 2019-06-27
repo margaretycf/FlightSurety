@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.4.25;
 
 // It's important to avoid vulnerabilities due to numeric overflow bugs
 // OpenZeppelin's SafeMath library, when used correctly, protects agains such bugs
@@ -196,6 +196,23 @@ contract FlightSuretyApp {
         emit OracleRequest(index, airline, flight, timestamp);
     }
 
+    function updateFlightStatus(string flightCode, uint256 timestamp, uint8 statusCode) external {
+        bytes32 flightKey = getFlightKey(msg.sender, flightCode, timestamp);
+        require(flightSuretyData.checkIsFlightRegistered(flightKey), "Flight code is not valid");
+        flightSuretyData.setFlightStatus(
+            flightCode,
+            timestamp,
+            statusCode,
+            msg.sender
+        );
+    }
+
+    function addInsuranceBalance(uint256 addValue) external payable {
+        uint256 amountToReturn = msg.value - addValue;
+        flightSuretyData.addInsuranceBalance.value(addValue)(msg.sender);
+        msg.sender.transfer(amountToReturn);
+    }
+
    /**
     * @dev Passenger buy insurance
     *
@@ -220,6 +237,16 @@ contract FlightSuretyApp {
         flightSuretyData.buyInsurance.value(amountToPaid)(passenger, flightKey, amountToPaid);
         msg.sender.transfer(amountToReturn);
     }
+
+   /**
+    * @dev Get passenger Insurance record
+    *
+    */
+    function getPassengerInsuranceAmount(address airline,  string flightCode, uint256 timestamp) external view returns(uint256){
+        bytes32 flightKey = getFlightKey(airline, flightCode,  timestamp);
+        return flightSuretyData.getPassengerInsuranceAmount(flightKey, msg.sender);
+    }
+
 
     function insurancePayout(
                             address airline,
@@ -262,6 +289,8 @@ contract FlightSuretyApp {
     // Track all registered oracles
     mapping(address => Oracle) private oracles;
 
+    uint256 private oraclesCount;
+
     // Model for responses from oracles
     struct ResponseInfo {
         address requester;                              // Account that requested status
@@ -285,6 +314,10 @@ contract FlightSuretyApp {
     // they fetch data and submit a response
     event OracleRequest(uint8 index, address airline, string flight, uint256 timestamp);
 
+    function getOraclesCount ( ) external view returns(uint256)
+    {
+        return oraclesCount;
+    }
 
     // Register an oracle with the contract
     function registerOracle
@@ -302,6 +335,7 @@ contract FlightSuretyApp {
                                         isRegistered: true,
                                         indexes: indexes
                                     });
+        oraclesCount++;
     }
 
     function getMyIndexes
@@ -367,7 +401,21 @@ contract FlightSuretyApp {
         return keccak256(abi.encodePacked(airline, flight, timestamp));
     }
 
-    // Returns array of three non-duplicating integers from 0-9
+     function getInsuranceKey
+                        (
+                            address passenger,
+                            bytes32 flightKey
+                        )
+                        external
+                        view
+                        requireIsOperational
+
+                        returns(bytes32)
+    {
+        return keccak256(abi.encodePacked(passenger, flightKey));
+    }
+
+   // Returns array of three non-duplicating integers from 0-9
     function generateIndexes
                             (
                                 address account
@@ -377,7 +425,7 @@ contract FlightSuretyApp {
     {
         uint8[3] memory indexes;
         indexes[0] = getRandomIndex(account);
-        
+
         indexes[1] = indexes[0];
         while(indexes[1] == indexes[0]) {
             indexes[1] = getRandomIndex(account);

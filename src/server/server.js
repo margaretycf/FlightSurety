@@ -1,166 +1,155 @@
-import FlightSuretyData from "../../build/contracts/FlightSuretyData.json";
 import FlightSuretyApp from '../../build/contracts/FlightSuretyApp.json';
 import Config from './config.json';
 import Web3 from 'web3';
 import express from 'express';
+import AddressInfo from "./addressInfo";
+import fs from "fs";
 
 
 let config = Config['localhost'];
 let web3 = new Web3(new Web3.providers.WebsocketProvider(config.url.replace('http', 'ws')));
-web3.eth.defaultAccount = web3.eth.accounts[0];
-let flightSuretyData = new web3.eth.Contract(FlightSuretyData.abi, config.dataAddress);
-let flightSuretyApp = new web3.eth.Contract(FlightSuretyApp.abi, config.appAddress);
 
-let key;
-let airline;
-let flight;
-let timestamp;
-let oracles = [];
+let passengers;
+let airlines;
+let flights;
+let oracles;
 
-var x;
+let accounts = [];
+const oraclesInfo = [];
+const oraclesInfoFile = "oraclesInfo.log";
 
-let responses = [0, 10, 20, 20, 20, 30, 40, 50, 20, 20];
 
-//let accounts = web3.eth.accounts;
-web3.eth
-  .getAccounts(async (error, accounts) => {
-    //create 5 airlines for the dapp
-    try {
-      await flightSuretyApp.methods.airlineAddFunding().send({
-        from: accounts[0],
-        value: 10000000000000000000,
-        gas: 3000000
-      });
-    } catch (e) {
-      console.log(e);
-    }
-    try {
-      await flightSuretyApp.methods
-        .registerAirline(accounts[10])
-        .send({
-          from: accounts[0],
-          gas: 3000000
-        });
-      await flightSuretyApp.methods.airlineAddFunding().send({
-        from: accounts[10],
-        value: 10000000000000000000,
-        gas: 3000000
-      });
-    } catch (e) {
-      console.log(e);
-    }
-    try {
-      await flightSuretyApp.methods
-        .registerAirline(accounts[11])
-        .send({
-          from: accounts[0],
-          gas: 3000000
-        });
-      await flightSuretyApp.methods.airlineAddFunding().send({
-        from: accounts[11],
-        value: 10000000000000000000,
-        gas: 3000000
-      });
-    } catch (e) {
-      console.log(e);
-    }
+(async () => {
+  try {
+    let stopOnFSI = false;
+    const gas = 2000000;
+    accounts = await web3.eth.getAccounts();
+    web3.eth.defaultAccount = accounts[0];
 
-    /* oracles code */
-    //create 20+ accounts
-    for (var i = 1; i < 50; i++) {
-      try {
-        await flightSuretyApp.methods.registerOracle().send({
-          from: accounts[i],
-          value: 1000000000000000000,
-          gas: 3000000
-        });
-      } catch (e) {}
-      try {
-        let result = await flightSuretyApp.methods.getMyIndexes().call({
-          from: accounts[i]
-        });
-        console.log(
-          `          Oracle #${i} Registered With Indexes: ${result[0]}, ${
-            result[1]
-          }, ${result[2]}`
-        );
-        oracles.push({
-          address: accounts[i],
-          index1: result[0],
-          index2: result[1],
-          index3: result[2]
-        });
-      } catch (e) {}
-    }
+    // create airlines and passengers for the dapp
+    passengers = AddressInfo.getPassengers(accounts);
+    airlines = AddressInfo.getAirlines(accounts);
+    flights = AddressInfo.getFlights(accounts);
+    oracles = AddressInfo.getOracles(accounts);
 
-    //watch events give semi random response status
-    try {
-      flightSuretyApp.events.OracleRequest(
-        {
-          fromBlock: "latest"
-        },
-        async function(err, request) {
-          if (err) {
-            console.log("e3 ");
+    let flightSuretyApp = new web3.eth.Contract(FlightSuretyApp.abi, config.appAddress);
+
+     flightSuretyApp.events.allEvents(
+      {
+        fromBlock: "latest"
+      },
+      async function(error, event) {
+        try {
+          // next line used during debug
+          if (oraclesInfo.length === 0 && fs.existsSync(oraclesInfoFile)) {
+            const data = fs.readFileSync(oraclesInfoFile, "utf8");
+            const oInfo = JSON.parse(data);
+            oInfo.map(o => oraclesInfo.push(o));
           }
-          console.log(request.returnValues);
-          key = request.returnValues.index;
-          airline = request.returnValues.airline;
-          flight = request.returnValues.flight;
-          timestamp = request.returnValues.timestamp;
-
-          for (var i = 0; i < oracles.length; i++) {
-            if (
-              oracles[i].index1 == key ||
-              oracles[i].index2 == key ||
-              oracles[i].index3 == key
-            ) {
-              x = Math.floor(Math.random() * 10);
-
-              try {
-                flightSuretyApp.methods
-                  .submitOracleResponse(
-                    key,
-                    airline,
-                    flight,
-                    timestamp,
-                    responses[x]
-                  )
-                  .send({
-                    from: accounts[i],
-                    gas: 3000000
-                  })
-                  .catch(res => {
-                    //console.log("e4");
-                  });
-                console.log(key + " " + airline + " " + flight + " " + timestamp + " " + responses[x]);
-              } catch (e) {
-                //console.log("e3");
+          if (error) return console.log(error);
+          if (event.event === "OracleRequest") {
+            stopOnFSI = false;
+            const { event: evnt, blockNumber, returnValues } = event;
+            const { airline, flight, timestamp, index: idx } = returnValues;
+            console.log(
+              `>>> ${evnt} on block ${blockNumber} for airline ${airline}`
+            );
+            console.log(
+              `Use ${idx} as the index for flight ${flight} at ${timestamp}`
+            );
+            for (let i = 0; i < oraclesInfo.length && !stopOnFSI; i++) {
+              const oracleInfo = oraclesInfo[i];
+              const oIdx = oracleInfo.indexs;
+              if (idx === oIdx[0] || idx === oIdx[1] || idx === oIdx[2]) {
+                const airlineStatus = Math.floor(Math.random() * 5) * 10;
+                // commented lines below for debug
+                /*
+                const airlineStatus = Flights.filter(
+                  f => f.number === flight
+                )[0].status;
+                */
+                console.log(
+                  `${i} - ${idx} in ${oIdx} for oracle ${
+                    oracleInfo.address
+                  } status ${airlineStatus}`
+                );
+                try {
+                  await flightSuretyApp.methods
+                    .submitOracleResponse(
+                      idx,
+                      airline,
+                      flight,
+                      timestamp,
+                      airlineStatus
+                    )
+                    .send({ from: oracleInfo.address, gas });
+                } catch (e) {
+                  //console.log("FSS reject expected", e); // for debug
+                }
+              } else {
+                console.log(
+                  `${i} - ${idx} not in ${oIdx} for oracle ${
+                    oracleInfo.address
+                  }`
+                );
               }
             }
+          } else {
+            console.log(">>>", event.event, "on block", event.blockNumber);
+            if (event.event === "FlightStatusInfo") stopOnFSI = true;
           }
+        } catch (e) {
+          console.log("FSS Error", e);
         }
-      );
-    } catch (e) {
-      //onsole.log("e2");
+      }
+    );
+
+    const oraclesMap = oracles.map(oracle => oracle.address);
+    const totalOracles = await flightSuretyApp.methods
+      .getOraclesCount()
+      .call({ gas });
+    const value = await flightSuretyApp.methods
+      .REGISTRATION_FEE()
+      .call({ gas });
+
+    for (let i = 0; i < oraclesMap.length && totalOracles == 0; i++) {
+      const from = oraclesMap[i];
+      await flightSuretyApp.methods.registerOracle().send({ from, value, gas });
+      const r = await flightSuretyApp.methods.getMyIndexes().call({
+           from
+      });
+      console.log(`${i}: Indexes ${r} registered for oracle ${from}`);
+      oraclesInfo.push({ address: from, indexs: r });
     }
-  })
-  .catch(res => {
-    //console.log("e1");
-  });
-//console.log(test);
+    // next line used during debugging
+    fs.writeFileSync(
+      oraclesInfoFile,
+      JSON.stringify(oraclesInfo, null, 2),
+      "utf8"
+    );
 
+  } catch (e) {
+    console.log("cj error seen", e.message);
+  }
+})();
 
-
-
-// flightSuretyApp.events.OracleRequest({
-//     fromBlock: 0
-//   }, function (error, event) {
-//     if (error) console.log(error)
-//     console.log(event)
-// });
 
 const app = express();
+
+app.get("/api/addressInfo", (_, res) => {
+    if (accounts.length <= 0) {
+      const msg = "Error. No accounts setup yet!";
+      console.error(msg);
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ msg }));
+      return;
+    }
+
+    const addressInfo = { airlines, passengers, flights, oracles };
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify(addressInfo, null, 2));  
+});
+
 app.get('/api', (req, res) => {
     res.send({
       message: 'An API for use with your Dapp!'

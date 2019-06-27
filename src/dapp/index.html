@@ -19,52 +19,83 @@
         </button>
     </nav>
 
-    <main class="container">
+    <main>
 
-        <div id="display-wrapper" class="top-20">
+        <div class="container top">
+            <div id="cos">
+                Contract Operationl Status:
+                <span id="cos-value" class="cos">tbd</span>
+            </div>
+            <div>
+                App Contact Balance:
+                <span id="ac-balance" class="cos">tbd</span> Ether
+            </div>
+            <div>
+                Data Contact Balance:
+                <span id="dc-balance" class="cos">tbd</span> Ether
+            </div>
         </div>
- 
-        <div class="row top-20">
-            <label class="form"><strong>Register Airline:</strong></label>
-            Airline address:<input type="text" id="airline-address">
-            <btn class="btn btn-primary" id="register-airline">Register Airline</btn>
-        </div>
-
-
-        <div class="row top-20">
-            <label class="form"><strong>Fund registered Airline:</strong></label>
-            <select id="airlines"></select>
-            Fund:<input type="text" id="airline-fund"/> eth
-            <btn class="btn btn-primary" id="fund-airline">Fund Airline</btn>
-        </div>
-
-        <div class="row top-20">
-            <label class="form">Flight</label> 
-            Flight number:<input type="text" id="flight-number"> 
-            Address:<input type="text" id="flight-address"> 
-            Timestamp:<input type="text" id="flight-time">                 
-            <btn class="btn btn-primary" id="submit-oracle">Submit to Oracles</btn>
-        </div>
-
-        <div class="row top-20">
-            <label for="flight"><strong>Purchase Insurance: </strong></label>
-            <select id="passengers"></select>
-            <label for="flight">Flight:</label>
-            <select id="flights"></select>
-            <input type="text" id="insurance"/>eth
-            <button class="btn btn-primary" id="purchase">Purchase</button>
+        
+        <div class="container" id="ra">
+            <div class="row">
+                <btn class="btn btn-primary" id="register-airline">Register Airline</btn>
+                <label class="form"><strong>Register Airline:</strong></label>
+                <select type="text" id="airline-address"></select>
+                <label class="form">By</label>
+                <select type="text" id="airline-by"></select>             
+            </div>
         </div>
 
-        <div class="row top-20">
-            <label for="flight"><strong>Show insurance:</strong></label>
-            Passengers address:<input type="text" id="passenger-address2">
-            <button class="btn btn-primary" id="show">Show Funds</button>
+
+        <div class="container" id="fa">
+            <div class="row">
+                <btn class="btn btn-primary" id="fund-airline">Fund Airline</btn>
+                <label class="form"><strong>Fund registered Airline:</strong></label>
+                <select type="text" id="airlines"></select>
+                With <input type="text" id="airline-fund" value="10" size="5"/> 
+                <label class="form">Ethers</label>
+            </div>
         </div>
 
-        <div class="row top-20">
-            <label for="flight"><strong>Withdraw funds:</strong></label>
-            Passengers address:<input type="text" id="passenger-address">
-            <button class="btn btn-primary" id="withdraw">Withdraw Funds</button>
+        <div class="container" id="rf">
+            <div class="row">
+                <btn class="btn btn-primary" id="submit-oracle">Register Flight</btn>
+                <label class="form"><strong>Flight:</strong></label> 
+                <select type="text" id="flight-number"></select> 
+            </div>
+        </div>
+
+        <div class="container" id="pi">
+            <div class="row">
+                <button class="btn btn-primary" id="purchase-insurance">Buy Insurance</button>
+                <label class="form>"><strong>Passenger:</strong></label>
+                <select id="pi_passengers"></select>
+                <label class="form>"><strong>Flight:</strong></label>
+                <select type="text" id="pi_flights"></select>
+                <input type="text" id="insurance_amount" value="1" size="5"/>
+                <label class="form">Ethers</label>
+            </div>
+        </div>
+
+        <div class="container" id="rs">
+            <div class="row">
+              <button class="btn btn-primary" id="request-status">Flight Status</button>
+              <label class="form"><strong>Flight</strong></label>
+              <select type="text" id="rs-flight"></select>
+            </div>
+        </div>
+
+        <div class="container" id="ci">
+            <div class="row">
+                <button class="btn btn-primary" id="claim-insurance">Claim Insurance</button>
+                <label class="form"><strong>Passenger</strong></label>
+                <select type="text" id="ci-passengers"></select>
+                <button class="btn btn-primary credit" id="view-credit">View Credit</button>
+            </div>
+        </div>
+
+        <div class="container" id="balances">
+            <div id="cos" class="balances">Balances</div>
         </div>
 
 

@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.4.25;
 
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 
@@ -16,7 +16,6 @@ contract FlightSuretyData {
     struct Airline {
         bool isRegistered;
         bool isFunded;
-        uint256 fundBalance;
         mapping(address => bool) votedForAirlines;
     }
 
@@ -140,6 +139,14 @@ contract FlightSuretyData {
         return operational;
     }
 
+  function isAuthorized()
+                            public
+                            view
+                            returns(bool)
+  {
+        if (authorizedContracts[msg.sender] == 1) return true;
+        return false;
+  }
 
     /**
     * @dev Sets contract operations on/off
@@ -347,6 +354,16 @@ contract FlightSuretyData {
         callerPassenger.transfer(withdrawAmount);
     }
 
+    function getInsuranceBalance() external view requireIsOperational requireIsAuthorizedContract returns(uint256) {
+        return insuranceBalance;
+    }
+
+    function addInsuranceBalance(address callerAddress) external payable
+    requireIsOperational requireIsAuthorizedContract requireAirlineRegistered(callerAddress)
+    {
+        insuranceBalance = insuranceBalance.add(msg.value);
+    }
+
    /**
     * @dev Buy insurance for a flight
     *
@@ -364,6 +381,7 @@ contract FlightSuretyData {
      {
         bytes32 insuranceKey = _getInsuranceKey(passenger, flightKey);
         require(passengers[passenger].flightInsurances[insuranceKey].flightKey != flightKey, "Passenger has paid for insurance");
+        passengers[passenger].isPassenger = true;
         passengers[passenger].accountBalance = 0;
         insuranceBalance = insuranceBalance.add(msg.value);
         passengers[passenger].flightInsurances[insuranceKey] = Insurance({
@@ -371,6 +389,33 @@ contract FlightSuretyData {
             premiumAmount: premiumAmount,
             isRefunded: false
         });
+    }
+
+    function checkIsPassengerRegistered(address passenger)
+                external
+                view
+                requireIsOperational
+                requireIsAuthorizedContract
+                returns(bool)
+    {
+        return _isPassengerRegistered(passenger);
+    }
+
+    /**
+    * @dev Get passenger insurance amount
+    *
+    */
+   function getPassengerInsuranceAmount(bytes32 flightKey,
+                                        address callerPassenger)
+                                        external
+                                        view
+                                        requireIsOperational
+                                        requireIsAuthorizedContract
+                                        isPassenger(callerPassenger)
+                                        returns(uint256)
+    {
+        bytes32 insuranceKey = _getInsuranceKey(callerPassenger, flightKey);
+        return passengers[callerPassenger].flightInsurances[insuranceKey].premiumAmount;
     }
 
     /**
@@ -432,11 +477,13 @@ contract FlightSuretyData {
     function getFlightKey
                         (
                             address airline,
-                            string memory flight,
+                            string flight,
                             uint256 timestamp
                         )
-                        internal
-                        pure
+                        external
+                        view
+                        requireIsOperational
+                        requireIsAuthorizedContract
                         returns(bytes32)
     {
         return _getFlightKey(airline, flight, timestamp);
@@ -467,23 +514,28 @@ contract FlightSuretyData {
     /********************************************************************************************/
     /*                                        INTERNAL FUNCTIONS                                */
     /********************************************************************************************/
-    function _registerAirline(address newAirlineAddress) private
+    function _registerAirline(address newAirlineAddress) private requireIsOperational
     {
         // accept the new register
         airlines[newAirlineAddress].isRegistered = true;
         numberOfRegisteredAirlines = numberOfRegisteredAirlines.add(1);
+        _voteDone(newAirlineAddress);
         emit AirlineRegistered(newAirlineAddress);
     }
 
-    function _isAirlineRegistered(address airlineAddress) private returns(bool) {
+    function _voteDone(address airlineAddressToVote) private requireIsOperational {
+        registeringAirlines[airlineAddressToVote] = 0;
+    }
+
+    function _isAirlineRegistered(address airlineAddress) private view returns(bool) {
         return (airlines[airlineAddress].isRegistered);
     }
 
-    function _isAirlineRegistering(address airlineAddress) private returns(bool) {
+    function _isAirlineRegistering(address airlineAddress) private view returns(bool) {
         return (registeringAirlines[airlineAddress] > 0);
     }
 
-    function _isAirlineFunded(address airlineAddress) private returns(bool) {
+    function _isAirlineFunded(address airlineAddress) private view returns(bool) {
         return (airlines[airlineAddress].isFunded);
     }
 

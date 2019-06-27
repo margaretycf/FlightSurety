@@ -18,6 +18,10 @@ export default class DOM {
     static td = (...args) => DOM.makeElement(`td`, ...args);
     static attributeExceptions = [
       `role`,
+      `data-flight`,
+      `data-time`,
+      `data-airline`,
+      `class`
     ];
     
     static elid(id) { 
