@@ -33,14 +33,14 @@ import "./flightsurety.css";
 
         await displayBalance(contract);
 
+        displayAirlines(contract, DOM.elid("airlines"));
+        DOM.elid("fund-airline").addEventListener("click", () => fa(contract));
+        contract.getFundAirlineEvent(msg => displayStatus(msg, "fa"));
+
         displayAirlines(contract, DOM.elid("airline-address"), 1);
         displayAirlines(contract, DOM.elid("airline-by"));
         DOM.elid("register-airline").addEventListener("click", () => ra(contract));
         contract.getRegisterAirlineEvent(msg => displayStatus(msg, "ra"));
-
-        displayAirlines(contract, DOM.elid("airlines"));
-        DOM.elid("fund-airline").addEventListener("click", () => fa(contract));
-        contract.getFundAirlineEvent(msg => displayStatus(msg, "fa"));
 
         displayFlights(contract, DOM.elid("flight-number"));
         DOM.elid("register-flight").addEventListener("click", () => rf(contract));
@@ -48,7 +48,7 @@ import "./flightsurety.css";
 
         displayPassengers(contract, DOM.elid("pi_passengers"));
         displayFlights(contract, DOM.elid("pi_flights"));
-        DOM.elid("buy-insurance").addEventListener("click", () => pi(contract));
+        DOM.elid("purchase-insurance").addEventListener("click", () => pi(contract));
         contract.getBuyInsuranceEvent(msg => displayStatus(msg, "pi"));
 
         displayFlights(contract, DOM.elid("rs-flight"));
@@ -57,6 +57,7 @@ import "./flightsurety.css";
 
         displayPassengers(contract, DOM.elid("ci-passengers"));
         DOM.elid("claim-insurance").addEventListener("click", () => ci(contract));
+        displayFlights(contract, DOM.elid("ci-flights"));
         DOM.elid("view-credit").addEventListener("click", () => vc(contract));
         contract.getClaimInsuranceEvent(msg => displayStatus(msg, "ci"));
     });
@@ -65,10 +66,10 @@ import "./flightsurety.css";
 function displayAirlines(contract, select, dflt) {
     contract.airlinesInfo.map(airline => {
         let option = DOM.makeElement(
-      `         option`,
-                { value: `${airline.address}` },
-      `         ${airline.name}`
-            );
+            `option`,
+            { value: `${airline.address}` },
+      `     ${airline.name}`
+        );
         select.appendChild(option);
     });
     if (dflt) select.selectedIndex = dflt;
@@ -80,11 +81,11 @@ function displayFlights(contract, select) {
             airline => airline.address === flight.address
         )[0];
         let option = DOM.makeElement(
-      `     option`,
+            `option`,
             {
-                "data-flight": `${flight.number}`,
-                "data-time": `${flight.timestamp}`,
-                "data-airline": `${airline.address}`
+                dataFlight: `${flight.number}`,
+                dataTimestamp: `${flight.timestamp}`,
+                dataAirline: `${airline.address}`
             },
       `     ${flight.number} @ ${flight.timestamp} on ${airline.name}`
         );
@@ -122,7 +123,7 @@ async function fa(contract) {
     let msg = `Funding ${name} Airline.`;
     displayStatus(msg, "fa");
     try {
-        await contract.fundAirline(airline, amount);
+        await contract.sendFundToAirline(airline, amount);
     } catch (e) {
         err(e, msg, "fa");
     }
@@ -162,16 +163,16 @@ async function ra(contract) {
 
 function getFlight(select) {
     const selected = select.options[select.selectedIndex];
-    const flight = selected.getAttribute("data-flight");
-    const timestamp = selected.getAttribute("data-time");
-    const airline = selected.getAttribute("data-airline");
+    const flight = selected.getAttribute("dataFlight");
+    const timestamp = selected.getAttribute("dataTimestamp");
+    const airline = selected.getAttribute("dataAirline");
     const description = selected.text;
     return { airline, flight, timestamp, description };
 }
 
 async function rf(contract) {
     const { airline, flight, timestamp, description } = getFlight(
-        DOM.elid("rf-flight")
+        DOM.elid("flight-number")
     );
     let msg = `Registering flight ${description}.`;
     displayStatus(msg, "rf");
@@ -200,7 +201,7 @@ async function pi(contract) {
     msg += `${description} for ${amount} ethers.`;
     displayStatus(msg, "pi");
     try {
-        await contract.buyInsurance(airline, flight, timestamp, address, amount);
+        await contract.buyInsurance(address, airline, flight, timestamp, amount);
     } catch (e) {
         err(e, msg, "pi");
     }
@@ -222,11 +223,14 @@ async function rs(contract) {
 }
 
 async function ci(contract) {
+    const { airline, flight, timestamp, description } = getFlight(
+        DOM.elid("ci-flights")
+    );
     const { name, address } = getPassenger(DOM.elid("ci-passengers"));
-    let msg = `Claiming insurance for ${name}.`;
+    let msg = `Claiming insurance for ${name} on flight ${description}.`;
     displayStatus(msg, "ci");
     try {
-        await contract.claimInsurance(address);
+        await contract.claimInsurance(address, airline, flight, timestamp);
     } catch (e) {
         err(e, msg, "ci");
     }

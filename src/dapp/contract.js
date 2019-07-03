@@ -9,7 +9,7 @@ export default class Contract {
 
         let config = Config[network];
         this.config = config;
-        this.web3 = new Web3(new Web3.providers.HttpProvider(config.url));
+        this.web3 = new Web3(new Web3.providers.WebsocketProvider(config.url.replace("http", "ws")));
         this.flightSuretyData = new this.web3.eth.Contract(FlightSuretyData.abi, config.dataAddress);
         this.flightSuretyApp = new this.web3.eth.Contract(FlightSuretyApp.abi, config.appAddress);
         this.getAllEvents();
@@ -80,17 +80,15 @@ export default class Contract {
              .call({ from: self.owner}, callback);
      }
  
-    async registerAirline(airline, requestedBy, callback){
+    async registerAirline(airline, requestedBy){
         let self = this;
-        await self.flightSuretyApp.methods.registerAirline(airline)
-                .send({ from: requestedBy, gas: 2000000 }, (error, result) => {
-                    callback(error, result);
-                });
+        return await self.flightSuretyApp.methods.registerAirline(airline)
+                .send({ from: requestedBy, gas: 2000000 });
     }
 
 
     getRegisterAirlineEvent(msgcb) {
-        this.flightSuretyData.events.RegisterAirline(
+        this.flightSuretyData.events.AirlineRegistered(
           { fromBlock: "latest" },
           (err, res) => {
             if (err) return msgcb("Registering Airline Failed");
@@ -99,14 +97,12 @@ export default class Contract {
             msgcb(`Airline ${a} is registered.`);
           }
         );
-      }
+    }
 
-    async sendFundToAirline(airline,funds, callback){
+    async sendFundToAirline(airline,funds){
         let self = this;
         let amount = self.web3.utils.toWei(funds, "ether").toString();
-        await self.flightSuretyApp.methods.airlineAddFunding().send({ from: airline, value:amount}, (error, result) => {
-                callback(error, result);
-            });
+        return await self.flightSuretyApp.methods.airlineAddFunding().send({ from: airline, value:amount});
     }
 
     getAirlineNameFromAddress(address) {
@@ -115,7 +111,7 @@ export default class Contract {
     }
     
     getFundAirlineEvent(msgcb) {
-        this.flightSuretyData.events.Funded({ fromBlock: "latest" }, (err, res) => {
+        this.flightSuretyData.events.AirlineFunded({ fromBlock: "latest" }, (err, res) => {
             if (err) return msgcb("Funding Failed");
             const { airline, value } = res.returnValues;
             const name = this.getAirlineNameFromAddress(airline);
@@ -143,7 +139,7 @@ export default class Contract {
     }
     
     getRegisterFlightEvent(msgcb) {
-        this.flightSuretyData.events.RegisteredFlight(
+        this.flightSuretyData.events.FlightRegistered(
             { fromBlock: "latest" },
             (err, res) => {
                 if (err) return msgcb("Registering Flight Failed");
@@ -154,66 +150,26 @@ export default class Contract {
         );
     }
         
-    async buyInsurance(passenger, airline, flight, timestamp, insuranceAmount, callback){
+    async buyInsurance(passenger, airline, flight, timestamp, insuranceAmount){
         let self = this;
-        let amount = self.web3.utils.toWei(insurance);
-        this.addFunds(passenger, insurance);
-        await self.flightSuretyApp.methods.buyInsurance(passenger, ariline, flight, timestamp, insuranceAmount)
-                .send({ from: passenger, value: amount,  gas:3000000 }, (error, result) => {
-                    callback(error, result);
-                });
-    }
-
-    async show(passenger, callback){
-        let self = this;
-        self.funds = await self.flightSuretyApp.methods.getPassengersInsurance().call({from: passenger});
-    }
-
-    async pay(passenger, callback){
-        let self = this;
-        let passengerCurrentFund = this.getFunds(passenger);
-        let withdrawAmount = self.web3.utils.toWei(passengerCurrentFund);
-        await self.flightSuretyApp.methods.pay().send({from: passenger, value: passengerCurrentFund, gas:3000000}, (error, result) => {
-                if(error){
-                    console.log(error);
-                }else {
-                    console.log(result);
-                    callback(result);
-                }
-            });
-    }
-
-    addFunds(passenger, insurance){
-        for (var i=0; i < this.passengers.length; i++) {
-            if (this.passengers[i].account === passenger) {
-                this.passengers[i].passengerFund = insurance;
-            }
-        }
-    }
-
-    getFunds(passenger) {
-        let result = 0;
-        for (var i=0; i < this.passengers.length; i++) {
-            if (this.passengers[i].account === passenger) {
-                result = this.passengers[i].passengerFund;
-            }
-        }
-        return result;
+        let amount = self.web3.utils.toWei(insuranceAmount);
+         return await self.flightSuretyApp.methods.buyInsurance(passenger, airline, flight, timestamp, amount)
+                .send({ from: passenger, value: amount,  gas:3000000 });
     }
 
     getPassenger = pa =>
         this.passengersInfo.filter(p => p.address === pa)[0].name;
 
     getBuyInsuranceEvent(msgcb) {
-        this.flightSuretyData.events.Buy({ fromBlock: "latest" }, (err, res) => {
+        this.flightSuretyApp.events.InsurancePurchased({ fromBlock: "latest" }, (err, res) => {
             if (err) return msgcb("Buying Insurance Failed");
-                const {
-                        airline,
-                        flight,
-                        timestamp,
-                        passenger,
-                        amount
-                } = res.returnValues;
+            const {
+                    airline,
+                    flight,
+                    timestamp,
+                    passenger,
+                    amount
+            } = res.returnValues;
             const al = this.getAirlineNameFromAddress(airline);
             const p = this.getPassenger(passenger);
             let msg = `Bought ${this.web3.utils.fromWei(amount)} ether worth of`;
@@ -241,20 +197,6 @@ export default class Contract {
         }
     }
 
-    //fetchFlightStatus(flight, callback) {
-    //    let self = this;
-    //    let payload = {
-    //        airline: self.airlines[0],
-    //        flight: flight,
-    //        timestamp: Math.floor(Date.now() / 1000)
-    //    } 
-    //    self.flightSuretyApp.methods
-    //        .fetchFlightStatus(payload.airline, payload.flight, payload.timestamp)
-    //        .send({ from: self.owner}, (error, result) => {
-    //            callback(error, payload);
-    //        });
-    //}
-
     async fetchFlightStatus(airline, flight, timestamp) {
         await this.flightSuretyApp.methods
             .fetchFlightStatus(airline, flight, timestamp)
@@ -274,26 +216,20 @@ export default class Contract {
         );
     }
 
-    async claimInsurance(address) {
+    async claimInsurance(address, airline, flight, timestamp) {
         return await this.flightSuretyApp.methods
-          .claimInsurance()
-          .send({ from: address });
+            .insurancePayout(airline, flight, timestamp)
+            .send({ from: address });
     }
     
     getClaimInsuranceEvent(msgcb) {
-        this.flightSuretyData.events.Pay({ fromBlock: "latest" }, (err, res) => {
+        this.flightSuretyApp.events.InsurancePaidout({ fromBlock: "latest" }, (err, res) => {
             if (err) return msgcb(`Failed getting payout. ${err}`);
-                const { passenger, amount } = res.returnValues;
+                const { airline, flight, timestamp, passenger } = res.returnValues;
+                const al = this.getAirlineNameFromAddress(airline);
                 const p = this.getPassenger(passenger);
-                msgcb(`${p} payed ${this.web3.utils.fromWei(amount)} ether.`);
+                msgcb(`Insurance was payed out for ${p} on ${flight} @ ${timestamp} on ${al}.`);
             });
-    }
-    
-    async passengerCredit(address) {
-        const credit = await this.flightSuretyApp.methods
-            .passengerCredit()
-            .call({ from: address, gas: 4712388, gasPrice: 100000000000 });
-        return this.web3.utils.fromWei(credit);
     }
     
     async getContractBalances() {

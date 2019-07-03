@@ -36,17 +36,6 @@
             </div>
         </div>
         
-        <div class="container" id="ra">
-            <div class="row">
-                <btn class="btn btn-primary" id="register-airline">Register Airline</btn>
-                <label class="form"><strong>Register Airline:</strong></label>
-                <select type="text" id="airline-address"></select>
-                <label class="form">By</label>
-                <select type="text" id="airline-by"></select>             
-            </div>
-        </div>
-
-
         <div class="container" id="fa">
             <div class="row">
                 <btn class="btn btn-primary" id="fund-airline">Fund Airline</btn>
@@ -57,9 +46,19 @@
             </div>
         </div>
 
+        <div class="container" id="ra">
+            <div class="row">
+                <btn class="btn btn-primary" id="register-airline">Register Airline</btn>
+                <label class="form"><strong>Register Airline:</strong></label>
+                <select type="text" id="airline-address"></select>
+                <label class="form">By</label>
+                <select type="text" id="airline-by"></select>             
+            </div>
+        </div>
+
         <div class="container" id="rf">
             <div class="row">
-                <btn class="btn btn-primary" id="submit-oracle">Register Flight</btn>
+                <btn class="btn btn-primary" id="register-flight">Register Flight</btn>
                 <label class="form"><strong>Flight:</strong></label> 
                 <select type="text" id="flight-number"></select> 
             </div>
@@ -72,6 +71,7 @@
                 <select id="pi_passengers"></select>
                 <label class="form>"><strong>Flight:</strong></label>
                 <select type="text" id="pi_flights"></select>
+                <label class="form>"><strong>Insurance Amount:</strong></label>
                 <input type="text" id="insurance_amount" value="1" size="5"/>
                 <label class="form">Ethers</label>
             </div>
@@ -90,6 +90,8 @@
                 <button class="btn btn-primary" id="claim-insurance">Claim Insurance</button>
                 <label class="form"><strong>Passenger</strong></label>
                 <select type="text" id="ci-passengers"></select>
+                <label class="form>"><strong>Flight:</strong></label>
+                <select type="text" id="ci-flights"></select>
                 <button class="btn btn-primary credit" id="view-credit">View Credit</button>
             </div>
         </div>

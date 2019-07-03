@@ -56,7 +56,9 @@ contract FlightSuretyData {
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
-    event AirlineRegistered(address newAirline);
+    event AirlineRegistered(address airline);
+    event AirlineFunded(address airline, uint256 value);
+    event FlightRegistered(address airline, string flight, uint256 timestamp);
 
     /**
     * @dev Constructor
@@ -213,18 +215,17 @@ contract FlightSuretyData {
         count = numberOfRegisteredAirlines;
     }
 
-    function airlineAddFunding(address callerAirline)
+    function airlineAddFunding(address airline)
                             external payable
                             requireIsOperational
                             requireIsAuthorizedContract
-                            requireAirlineRegistered(callerAirline)
+                            requireAirlineRegistered(airline)
      {
         require(msg.value > 0, "The funding amount should be > 0");
-        require(!airlines[callerAirline].isFunded, "Calling airline has already funded their account");
-        //airlines[callerAirline].fundBalance.add(msg.value);
-        //airlineBalances[callerAirline] = airlineBalances[callerAirline].add(msg.value);
+        require(!airlines[airline].isFunded, "Calling airline has already funded their account");
         airlineBalance = airlineBalance.add(msg.value);
-        airlines[callerAirline].isFunded = true;
+        airlines[airline].isFunded = true;
+        emit AirlineFunded(airline, msg.value);
     }
 
     function isAirline(address airlineAddress)
@@ -263,8 +264,6 @@ contract FlightSuretyData {
                         requireIsAuthorizedContract
                         returns(uint256)
     {
-        //balance = airlines[airlineAddress].fundBalance;
-        //balance = airlineBalances[airlineAddress];
         return airlineBalance;
     }
 
@@ -287,6 +286,7 @@ contract FlightSuretyData {
             statusCode: 0,
             airline: msg.sender
         });
+        emit FlightRegistered(callerAirline, flightCode, timestamp);
     }
 
     function checkIsFlightRegistered(bytes32 flightKey)
@@ -339,6 +339,7 @@ contract FlightSuretyData {
         return passengers[callerAddress].accountBalance;
     }
 
+    event PassengerWithdrawn(address passenger, uint256 amount);
     // Passenger withdraws insurance payout
     function withdrawPassengerBalance(
                                         uint256 withdrawAmount,
@@ -349,9 +350,10 @@ contract FlightSuretyData {
                                     requireIsAuthorizedContract
                                     isPassenger(callerPassenger)
     {
-        require(passengers[callerPassenger].accountBalance >= withdrawAmount, "Not enoguth passanger balance");
+        require(passengers[callerPassenger].accountBalance >= withdrawAmount, "Not enough passenger balance");
         passengers[callerPassenger].accountBalance = passengers[callerPassenger].accountBalance.sub(withdrawAmount);
         callerPassenger.transfer(withdrawAmount);
+        emit PassengerWithdrawn(callerPassenger, withdrawAmount);
     }
 
     function getInsuranceBalance() external view requireIsOperational requireIsAuthorizedContract returns(uint256) {

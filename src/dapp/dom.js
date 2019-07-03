@@ -18,9 +18,9 @@ export default class DOM {
     static td = (...args) => DOM.makeElement(`td`, ...args);
     static attributeExceptions = [
       `role`,
-      `data-flight`,
-      `data-time`,
-      `data-airline`,
+      `dataFlight`,
+      `dataTimestamp`,
+      `dataAirline`,
       `class`
     ];
     
@@ -71,13 +71,13 @@ export default class DOM {
         DOM.appendText(el, textOrPropsOrChild);
       } else if (typeof textOrPropsOrChild === `object`) {
         Object.keys(textOrPropsOrChild).forEach((propName) => {
-          if (propName in el || attributeExceptions.includes(propName)) {
+          if (propName in el || this.attributeExceptions.includes(propName)) {
             const value = textOrPropsOrChild[propName];
     
             if (propName === `style`) {
               DOM.setStyles(el, value);
             } else if (value) {
-              el[propName] = value;
+              el.setAttribute(propName, value);
             }
           } else {
             console.warn(`${propName} is not a valid property of a <${type}>`);

@@ -29,14 +29,6 @@ contract FlightSuretyApp {
     FlightSuretyData private flightSuretyData;
     bool private operational = true;
 
-    // struct Flight {
-    //     bool isRegistered;
-    //     uint8 statusCode;
-    //     uint256 updatedTimestamp;
-    //     address airline;
-    // }
-    // mapping(bytes32 => Flight) private flights;
-
     uint8 private constant AIRLINES_CONSENSUS_THRESHOLD = 4;
     uint8 private constant AIRLINES_MULTI_PART_CONSENSUS_RATE = 2;
     uint private constant AIRLINE_CONTRACT_FEE = 10 ether;
@@ -213,6 +205,7 @@ contract FlightSuretyApp {
         msg.sender.transfer(amountToReturn);
     }
 
+    event InsurancePurchased(address airline, string flight, uint256 timestamp, address passenger, uint256 amount);
    /**
     * @dev Passenger buy insurance
     *
@@ -233,9 +226,8 @@ contract FlightSuretyApp {
         require(amountToPaid > 0, "Insurance amount should be > 0");
         require(amountToPaid <= MAX_INSURANCE_PREMIUM_AMOUNT, "Insurance amount is over the maximum premium limit");
         require(msg.value >= amountToPaid, "Passenger has not enough ether to pay");
-        uint256 amountToReturn = msg.value - amountToPaid;
         flightSuretyData.buyInsurance.value(amountToPaid)(passenger, flightKey, amountToPaid);
-        msg.sender.transfer(amountToReturn);
+        emit InsurancePurchased(airline, flightCode, timestamp, passenger, msg.value);
     }
 
    /**
@@ -248,6 +240,7 @@ contract FlightSuretyApp {
     }
 
 
+   event InsurancePaidout(address airline, string flight, uint256 timestamp, address passenger);
     function insurancePayout(
                             address airline,
                             string flightCode,
@@ -258,9 +251,10 @@ contract FlightSuretyApp {
         bytes32 flightKey = getFlightKey(airline, flightCode,  timestamp);
         // check flight state
         uint8 flightStatus = flightSuretyData.getFlightStatus(airline, flightCode, timestamp);
-        require(flightStatus == STATUS_CODE_LATE_AIRLINE, "Flight Status not appect for payout");
+        require(flightStatus == STATUS_CODE_LATE_AIRLINE, "Flight Status is not for payout");
         // payout
         flightSuretyData.insurancePayout(flightKey, PAYOUT_RATE, msg.sender);
+        emit InsurancePaidout(airline, flightCode, timestamp, msg.sender);
     }
 
     function withdrawPassengerBalance(uint256 withdrawAmount)
