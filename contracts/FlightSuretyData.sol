@@ -330,13 +330,14 @@ contract FlightSuretyData {
         return flights[flightKey].statusCode;
     }
 
-    function getPassengerBalance(address callerAddress)
+    event PassengerCreditBalance(address passenger, uint256 credit);
+    function getPassengerBalance(address passengerAddress)
                                 external view requireIsOperational
                                 requireIsAuthorizedContract
-                                isPassenger(callerAddress)
+                                isPassenger(passengerAddress)
                                 returns(uint256)
     {
-        return passengers[callerAddress].accountBalance;
+        return passengers[passengerAddress].accountBalance;
     }
 
     event PassengerWithdrawn(address passenger, uint256 amount);
@@ -350,7 +351,7 @@ contract FlightSuretyData {
                                     requireIsAuthorizedContract
                                     isPassenger(callerPassenger)
     {
-        require(passengers[callerPassenger].accountBalance >= withdrawAmount, "Not enough passenger balance");
+        require(passengers[callerPassenger].accountBalance >= withdrawAmount, "Withdraw is larger than passenger insurance credit balance");
         passengers[callerPassenger].accountBalance = passengers[callerPassenger].accountBalance.sub(withdrawAmount);
         callerPassenger.transfer(withdrawAmount);
         emit PassengerWithdrawn(callerPassenger, withdrawAmount);
@@ -446,9 +447,10 @@ contract FlightSuretyData {
         bytes32 insuranceKey = _getInsuranceKey(callerPassenger, flightKey);
         require(passengers[callerPassenger].flightInsurances[insuranceKey].flightKey == flightKey, "Passenger did not buy insurance");
         uint256 payout = passengers[callerPassenger].flightInsurances[insuranceKey].premiumAmount.mul(payoutRate).div(100);
-        require(insuranceBalance >= payout, "Not enoguth insurance balance");
-        insuranceBalance = insuranceBalance.sub(payout);
+        require(airlineBalance >= payout, "Not enough airlines insurance balance");
+        airlineBalance = airlineBalance.sub(payout);
         passengers[callerPassenger].accountBalance = passengers[callerPassenger].accountBalance.add(payout);
+        passengers[callerPassenger].flightInsurances[insuranceKey].isRefunded = true;
     }
 
     /**

@@ -41,7 +41,8 @@
                 <btn class="btn btn-primary" id="fund-airline">Fund Airline</btn>
                 <label class="form"><strong>Fund registered Airline:</strong></label>
                 <select type="text" id="airlines"></select>
-                With <input type="text" id="airline-fund" value="10" size="5"/> 
+                <label class="form"><strong>With</strong></label>
+                <input type="text" id="airline-fund" value="10" size="5"/> 
                 <label class="form">Ethers</label>
             </div>
         </div>
@@ -73,7 +74,7 @@
                 <select type="text" id="pi_flights"></select>
                 <label class="form>"><strong>Insurance Amount:</strong></label>
                 <input type="text" id="insurance_amount" value="1" size="5"/>
-                <label class="form">Ethers</label>
+                <label class="form"><strong>Ethers</strong></label>
             </div>
         </div>
 
@@ -92,12 +93,30 @@
                 <select type="text" id="ci-passengers"></select>
                 <label class="form>"><strong>Flight:</strong></label>
                 <select type="text" id="ci-flights"></select>
+            </div>
+        </div>
+
+        <div class="container" id="dc">
+            <div class="row">
                 <button class="btn btn-primary credit" id="view-credit">View Credit</button>
+                <label class="form"><strong>Passenger</strong></label>
+                <select type="text" id="dc-passengers"></select>
+            </div>
+        </div>
+
+        <div class="container" id="wi">
+            <div class="row">
+                <button class="btn btn-primary" id="withdraw-credit">Withdraw Credit</button>
+                <label class="form"><strong>Passenger</strong></label>
+                <select type="text" id="wi-passengers"></select>
+                <label class="form"><strong>Withdraws</strong></label>
+                <input type="text" id="withdraw-amount" value="1" size="5"/>
+                <label class="form"><strong>Ethers</strong></label>
             </div>
         </div>
 
         <div class="container" id="balances">
-            <div id="cos" class="balances">Balances</div>
+            <div id="cos" class="balances">Passenger Ethereum Account Balances</div>
         </div>
 
 

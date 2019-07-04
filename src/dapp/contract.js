@@ -119,19 +119,6 @@ export default class Contract {
         });
     }
  
-    getStateStr(no) {
-        switch (no) {
-            case "0":
-                return "Unregistered";
-            case "1":
-                return "Registered";
-            case "2":
-                return "Funded";
-            default:
-                return "Unknown";
-        }
-    }
-    
     async registerFlight(airline, flight, timestamp) {
         return await this.flightSuretyApp.methods
           .registerFlight(flight, timestamp)
@@ -217,6 +204,11 @@ export default class Contract {
     }
 
     async claimInsurance(address, airline, flight, timestamp) {
+        // to demo that passenger is able to claim for insurance refund
+        // first set airline flght status to be "20" - Late Airline 
+         await this.flightSuretyApp.methods
+            .updateFlightStatus(flight, timestamp, "20")
+            .send( {from: airline} );
         return await this.flightSuretyApp.methods
             .insurancePayout(airline, flight, timestamp)
             .send({ from: address });
@@ -231,7 +223,38 @@ export default class Contract {
                 msgcb(`Insurance was payed out for ${p} on ${flight} @ ${timestamp} on ${al}.`);
             });
     }
+
+    async passengerCredit(address) {
+        const credit = await this.flightSuretyApp.methods
+          .getPassengerBalance(address)
+          .call({ from: address, gas: 4712388, gasPrice: 100000000000 });
+        return this.web3.utils.fromWei(credit);
+    }
     
+    getPassengerCreditBalanceeEvent(msgcb) {
+        this.flightSuretyApp.events.PassengerCreditBalance({ fromBlock: "latest" }, (err, res) => {
+            if (err) return msgcb(`Failed getting passenger insurance credit balance. ${err}`);
+                const { passenger, credit } = res.returnValues;
+                const p = this.getPassenger(passenger);
+                msgcb(`Passenger ${p} has insurance credit balance ${credit} eithers.`);
+            });
+    }
+    
+    async withdrawCredit(address, amount) {
+        return await this.flightSuretyApp.methods
+            .withdrawPassengerBalance(this.web3.utils.toWei(amount))
+            .send({ from: address });
+    }
+    
+    getWithdrawCreditEvent(msgcb) {
+        this.flightSuretyData.events.PassengerWithdrawn({ fromBlock: "latest" }, (err, res) => {
+            if (err) return msgcb(`Failed withdrawing credit. ${err}`);
+                const { passenger, amount } = res.returnValues;
+                const p = this.getPassenger(passenger);
+                msgcb(`${p} withdrew ${this.web3.utils.fromWei(amount)} eithers successfully.`);
+            });
+    }
+
     async getContractBalances() {
         const dbal = await this.web3.eth.getBalance(this.config.dataAddress);
         const data = this.web3.utils.fromWei(dbal);

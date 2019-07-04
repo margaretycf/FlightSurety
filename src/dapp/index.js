@@ -58,8 +58,14 @@ import "./flightsurety.css";
         displayPassengers(contract, DOM.elid("ci-passengers"));
         DOM.elid("claim-insurance").addEventListener("click", () => ci(contract));
         displayFlights(contract, DOM.elid("ci-flights"));
-        DOM.elid("view-credit").addEventListener("click", () => vc(contract));
         contract.getClaimInsuranceEvent(msg => displayStatus(msg, "ci"));
+ 
+        displayPassengers(contract, DOM.elid("dc-passengers"));
+        DOM.elid("view-credit").addEventListener("click", () => vc(contract));
+
+        displayPassengers(contract, DOM.elid("wi-passengers"));
+        DOM.elid("withdraw-credit").addEventListener("click", () => wi(contract));
+        contract.getWithdrawCreditEvent(msg => displayStatus(msg, "wi"));
     });
 })();
 
@@ -238,15 +244,30 @@ async function ci(contract) {
 }
 
 async function vc(contract) {
-    const { name, address } = getPassenger(DOM.elid("ci-passengers"));
-    let msg = `Getting insurance for ${name}.`;
-    displayStatus(msg, "ci");
+    const { name, address } = getPassenger(DOM.elid("dc-passengers"));
+    let msg = `Getting insurance refund credit for ${name}.`;
+    displayStatus(msg, "dc");
     try {
         const credit = await contract.passengerCredit(address);
-        msg = `${name} has a credit of ${credit} ether.`;
-        displayStatus(msg, "ci");
+        msg = `${name} has a credit of ${credit} ethers.`;
+        displayStatus(msg, "dc");
     } catch (e) {
-        err(e, msg, "ci");
+        err(e, msg, "dc");
+    }
+    await displayBalance(contract);
+}
+
+async function wi(contract) {
+    const { name, address } = getPassenger(DOM.elid("wi-passengers"));
+    const amount = DOM.elid("withdraw-amount").value;
+    let msg = `Withdrawing insurance credit ${amount} eithers for ${name}.`;
+    displayStatus(msg, "wi");
+    try {
+        await contract.withdrawCredit(address, amount);
+        msg = `${name} has withdrawn a credit of ${amount} ethers.`;
+        displayStatus(msg, "wi");
+    } catch (e) {
+        err(e, msg, "wi");
     }
     await displayBalance(contract);
 }

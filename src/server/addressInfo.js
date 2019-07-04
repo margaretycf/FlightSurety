@@ -24,13 +24,14 @@ const addressesIsInvalid = (addresses, startIndex, arr, msg) => {
   
   const getAirlines = (addresses, startIndex = 1) => {
     const airlines = [
-      { name: "South West" },
-      { name: "America" },
-      { name: "Qantas" },
+      { name: "Southwest" },
+      { name: "American" },
+      { name: "JetBlue" },
       { name: "Alaska" },
-      { name: "Cathay" },
-      { name: "Azul" },
-      { name: "British" }
+      { name: "United" },
+      { name: "Delta" },
+      { name: "British" },
+      { name: "China Southern" }
     ];
     if (addressesIsInvalid(addresses, startIndex, airlines, "getAirlines"))
       return null;
@@ -38,7 +39,10 @@ const addressesIsInvalid = (addresses, startIndex, arr, msg) => {
   };
   
   const getPassengers = (addresses, startIndex = 8) => {
-    const passengers = [{ name: "John Doe" }, { name: "Jane Smith" }];
+    const passengers = [
+      { name: "John Smith" },
+      { name: "Susan Lee" }
+    ];
     if (addressesIsInvalid(addresses, startIndex, passengers, "getPassengers"))
       return null;
     return assignAddresses(addresses, startIndex, passengers);

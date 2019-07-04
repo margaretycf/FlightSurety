@@ -257,6 +257,11 @@ contract FlightSuretyApp {
         emit InsurancePaidout(airline, flightCode, timestamp, msg.sender);
     }
 
+    function getPassengerBalance(address passenger) external returns(uint256)
+    {
+        return flightSuretyData.getPassengerBalance(passenger);
+    }
+
     function withdrawPassengerBalance(uint256 withdrawAmount)
                                     external payable
     {

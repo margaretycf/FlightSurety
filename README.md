@@ -1,15 +1,13 @@
 # FlightSurety
 
-FlightSurety is a sample application project for Udacity's Blockchain course.
+[FlightSurety](https://www.udacity.com/course/blockchain-developer-nanodegree--nd1309) is an application project for Udacity's Blockchain course.
 
 ## Project Environment
-Execute this command to find out:
-`truffle v`
-
+Execute this command to find out:`truffle v`
 ```
-Truffle v5.0.24 (core: 5.0.24)
-Solidity - 0.5.2 (solc-js)
-Node v10.15.0
+Truffle v5.0.25 (core: 5.0.25)
+Solidity - ^0.4.25 (solc-js)
+Node v10.16.0
 Web3.js v1.0.0-beta.37
 
 ```
